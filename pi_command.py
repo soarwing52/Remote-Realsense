@@ -112,7 +112,6 @@ def min2decimal(in_data):
     :param in_data: lon / lat
     :return: in decimal poiints
     """
-    import random
     try:
         latgps = float(in_data)
         latdeg = int(latgps / 100)
@@ -157,7 +156,7 @@ def gps_information(port):
     return lon, lat
 
 
-def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic):
+def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic, distance):
     """
 
     :param location:
@@ -181,6 +180,8 @@ def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic)
         foto_location = (0,0)
         i = 1
         gps_status.value = 1
+        lon, lat = gps_information(serialPort)
+        gps_status.value = 2
         auto = False
         current_weg_num = weg_num.value
         while True:
@@ -202,7 +203,7 @@ def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic)
             elif camera_command.value == 99:
                 break
 
-            if auto:# and gps_dis(current_location, foto_location) > 15:
+            if auto:# and gps_dis(current_location, foto_location) > distance.value:
                 #print(gps_dis(current_location, foto_location))
                 print('auto take pic')
                 local_pic = True
@@ -222,6 +223,8 @@ def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic)
                 now = datetime.datetime.now()
                 date = '{},{},{},{}'.format(now.day, now.month, now.year, now.time())
                 (color_frame_num, depth_frame_num) = frame_num[:]
+                if color_frame_num == 0:
+                    (color_frame_num, depth_frame_num) = frame_num[:]
                 logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
                 print('Foto {} gemacht um {:.03},{:.04}, weg num: {}'.format(i, lon, lat, weg_num.value))
                 with open('/home/pi/RR/foto_log/{:02d}{:02d}_{:03d}.txt'.format(now.month, now.day, weg_num.value), 'a') as log:
@@ -276,6 +279,7 @@ class RScam:
         self.camera_command = mp.Value('i', 0)
         self.take_pic = mp.Value('i', 0)
         self.gps_status = mp.Value('i', 0)
+        self.distance = mp.Value('i', 15)
 
     def camera_loop(self):
         while self.camera_command.value != 99:
@@ -352,8 +356,10 @@ class RScam:
 
     def gps_on(self):
         gps_process = mp.Process(target=gps_main, args=(self.location, self.gps_status, self.num, self.frame_num,
-                                                        self.camera_command, self.take_pic))
+                                                        self.camera_command, self.take_pic, self.distance))
         gps_process.start()
 
     def get_gps(self):
         return (self.location[:])
+
+
