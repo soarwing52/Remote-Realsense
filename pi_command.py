@@ -112,6 +112,7 @@ def min2decimal(in_data):
     :param in_data: lon / lat
     :return: in decimal poiints
     """
+    import random
     try:
         latgps = float(in_data)
         latdeg = int(latgps / 100)
@@ -127,19 +128,27 @@ def min2decimal(in_data):
 def gps_information(port):
     lon, lat = 0,0
     while lon == 0 or lat == 0:
-        line = port.readline()
-        data = line.split(b',')
-        data = [x.decode("UTF-8") for x in data]
-        if data[0] == '$GPRMC':
-            if data[2] == "A":
-                lat = min2decimal(data[3])
-                lon = min2decimal(data[5])
-        elif data[0] == '$GPGGA':
-            if data[6] == '1':
-                lon = min2decimal(data[4])
-                lat = min2decimal(data[2])
-        time.sleep(1)
-
+        try:
+            line = port.readline()
+            data = line.split(b',')
+            data = [x.decode("utf-8") for x in data]
+            if data[0] == '$GPRMC':
+                if data[2] == "A":
+                    lat = min2decimal(data[3])
+                    lon = min2decimal(data[5])
+                else:
+                    print(data[2:6])
+            elif data[0] == '$GPGGA':
+                if data[6] == '1':
+                    lon = min2decimal(data[4])
+                    lat = min2decimal(data[2])
+                else:
+                    print(data[2:7])
+            time.sleep(1)
+        except UnicodeDecodeError:
+            print('decode error')
+        finally:
+            pass
 
     with open('/home/pi/RR/location.csv', 'w') as gps:
         gps.write('Lat,Lon\n')
@@ -262,7 +271,7 @@ class RScam:
         self.num = mp.Value('i', bag_num())
         jpg = cv2.imread('/home/pi/RR/jpg.jpeg')
         self.img = cv2.imencode('.jpg', jpg)[1].tobytes()
-        self.location = mp.Array('d', [0, 0])
+        self.location = mp.Array('d', [0.0, 0.0])
         self.frame_num = mp.Array('i', [0, 0])
         self.camera_command = mp.Value('i', 0)
         self.take_pic = mp.Value('i', 0)

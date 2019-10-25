@@ -2,7 +2,7 @@ from flask import Flask, render_template, Response, request
 from new_command import RScam
 import threading
 
-index = """	<h1>Image Stream </h1>
+index = """ <h1>Image Stream </h1>
     <img src="{{ url_for('video_feed') }}">"""
 app = Flask(__name__)
 a = RScam()
@@ -39,7 +39,8 @@ def command(cmd):
             print(a.gps_status.value, a.camera_command.value)
             return "start but waiting GPS"
     elif cmd == "gps":
-        ans = a.get_gps()
+        ans = str(a.get_gps())
+        print(ans)
         return ans
     else:
         try:
@@ -48,7 +49,12 @@ def command(cmd):
             return "{} not allowed".format(cmd)
         finally:
             return cmd
-
+@app.rout('/auto/<in_text>')
+def auto(in_text):
+    if in_text == 'true':
+        a.camera_command.value = 11
+    elif in_text == 'false':
+        a.camera_command.value = 12
 
 
 @app.route('/dis/<num>')
