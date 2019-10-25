@@ -1,2 +1,5 @@
+__pycache__
 .idea
 *.pyc
+2_server.py
+command_for_flask.py
