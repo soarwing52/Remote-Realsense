@@ -184,6 +184,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         # set auto exposure but process data first
         color_sensor = profile.get_device().query_sensors()[1]
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
+        camera_status.value = 1
         while camera_status.value != 99:
             frames = pipeline.wait_for_frames()
             depth_frame = frames.get_depth_frame()
@@ -205,6 +206,9 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 recorder.pause()
                 take_pic.value = 0
 
+            if camera_status.value == 2:
+                break
+
         child_conn.close()
         pipeline.stop()
 
@@ -213,7 +217,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     finally:
         print('pipeline closed')
-        camera_status.value = 98
+
 
 
 def bag_num():
@@ -270,22 +274,21 @@ class RScam:
         gps_process.start()
 
     def main_loop(self):
-        while self.camera_command.value != 99:
+        while self.camera_command.value < 90:
             if self.gps_status.value == 3:
                 break
             elif self.gps_status == 1:
                 time.sleep(1)
-            else:
+            elif self.camera_command.value == 0:
                 parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
                 bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
-                cam_proccess = mp.Process(target=Camera,
-                                          args=(child_conn, self.take_pic, self.Frame_num, self.camera_command, bag_name))
-                cam_proccess.start()
+                cam_process = mp.Process(target=Camera, args=(child_conn, self.take_pic,
+                                                              self.Frame_num, self.camera_command, bag_name))
+                cam_process.start()
                 self.command_receiver(parent_conn, bag)
 
         self.gps_status.value = 0
-
 
     def command_receiver(self, parent_conn, bag):
         auto = False
@@ -320,6 +323,8 @@ class RScam:
                 print('take manual')
                 local_take_pic = True
                 self.camera_command.value = 1
+            elif cmd == 2:
+                break
 
             if auto is True:
                 if gps_dis(current_location, foto_location) > 15:

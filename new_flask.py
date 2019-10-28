@@ -42,7 +42,7 @@ def command(cmd):
             print(a.gps_status.value, a.camera_command.value)
             return "start but waiting GPS"
     elif cmd == "gps":
-        ans = str(a.get_gps())
+        ans = str(a.Location[:])
         print(ans)
         return ans
     else:
