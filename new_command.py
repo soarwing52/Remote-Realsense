@@ -34,13 +34,13 @@ def port_check(gps_on):
     serialPort.timeout = 2
     exist_port = None
     win = ['COM{}'.format(x) for x in range(10)]
-    linux = ['/dev/ttbUSB{}'.format(x) for x in range(5)]
+    linux = ['/dev/ttyUSB{}'.format(x) for x in range(5)]
     for x in (win + linux):
         serialPort.port = x
         try:
             serialPort.open()
             serialPort.close()
-            exist_port = portnum
+            exist_port = x
         except serial.SerialException:
             pass
         finally:
@@ -165,12 +165,11 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
     """
     print('camera start')
     try:
-        bag_name = './bag/{}.bag'.format(bag)
         pipeline = rs.pipeline()
         config = rs.config()
         config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
         config.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 15)
-        config.enable_record_to_file(bag_name)
+        config.enable_record_to_file(bag)
         profile = pipeline.start(config)
 
         device = profile.get_device() # get record device
@@ -261,7 +260,7 @@ class RScam:
 
     def start_gps(self):
         # Start GPS process
-        gps_process = Process(target=GPS, args=(self.Location,self.gps_status,))
+        gps_process = mp.Process(target=GPS, args=(self.Location,self.gps_status,))
         gps_process.start()
 
     def main_loop(self):
@@ -271,8 +270,9 @@ class RScam:
             elif self.gps_status == 1:
                 time.sleep(1)
             else:
-                parent_conn, child_conn = Pipe()
+                parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
+                bag_name = "{}{}.bag".format(self.root_dir, bag)
                 cam_proccess = mp.Process(target=Camera,
                                           args=(child_conn, self.take_pic, self.Frame_num, self.camera_command, bag))
                 cam_proccess.start()

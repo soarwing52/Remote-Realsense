@@ -77,34 +77,6 @@ def gps_dis(location_1,location_2):
     #print("Result:", distance)
     return distance
 
-def fake_gps(location, status, frame_num, take_pic ):
-    import random
-    foto_location = (0,0)
-    foto_frame = frame_num[0]
-    local_pic = False
-    i = 0
-    status.value = 1
-    while True:
-        lon, lat = random.random(), random.random()
-        current_location = [lon, lat]
-        location[:] = [lon, lat]
-
-        if take_pic.value == 1:
-            continue
-
-        if gps_dis(current_location, foto_location) > 15:
-            print('auto take pic')
-            local_pic = True
-
-        if local_pic:
-            take_pic.value = 1
-            (color_frame_num, depth_frame_num) = frame_num[:]
-            logmsg = '{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat)
-            print('Foto {} gemacht um {:.03},{:.04}'.format(i, lon, lat))
-            print(logmsg)
-            i += 1
-
-        time.sleep(3)
 
 def min2decimal(in_data):
     """
@@ -135,14 +107,10 @@ def gps_information(port):
                 if data[2] == "A":
                     lat = min2decimal(data[3])
                     lon = min2decimal(data[5])
-                else:
-                    print(data[2:6])
             elif data[0] == '$GPGGA':
                 if data[6] == '1':
                     lon = min2decimal(data[4])
                     lat = min2decimal(data[2])
-                else:
-                    print(data[2:7])
             time.sleep(1)
         except UnicodeDecodeError:
             print('decode error')
@@ -185,32 +153,41 @@ def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic,
         auto = False
         current_weg_num = weg_num.value
         while True:
+            l0 = time.time()
             lon, lat = gps_information(serialPort)
+            l1 = time.time()
             current_location = (lon, lat)
             location[:] = [lon,lat]
+            a0 = time.time()
+            value = camera_command.value
+            print("command: ", value)
+            a1 =time.time()
 
-            print('command' , camera_command.value)
-            if camera_command.value == 11:
+            if value == 11:
                 auto = True
                 camera_command.value = 1
-            elif camera_command.value == 12:
+            elif value == 12:
                 auto = False
                 camera_command.value = 1
-            elif camera_command.value == 3:
+            elif value == 3:
                 print('take manual')
                 local_pic = True
                 camera_command.value = 1
-            elif camera_command.value == 99:
+            elif value == 99:
                 break
-
+            b = time.time()
+            
             if auto:# and gps_dis(current_location, foto_location) > distance.value:
                 #print(gps_dis(current_location, foto_location))
                 print('auto take pic')
                 local_pic = True
-
+            att= time.time()
+            print('gps:{}\nread value: {}\nif for cmd: {}\nauto time:{}'.format((l1-l0),(a1-a0),(b-a1),(att-b)))
             if camera_command.value != 1 or take_pic.value == 3:# or current_location == foto_location:
                 local_pic = False
-                print('continue')
+                c = time.time()
+                print('continue time{}'.format((c-att)))
+                
                 continue
 
             if current_weg_num != weg_num.value:
@@ -284,7 +261,7 @@ class RScam:
     def camera_loop(self):
         while self.camera_command.value != 99:
             print('camera loop', self.camera_command.value)
-            if self.gps_status.value == 1:
+            if self.gps_status.value == 2:
                 self.num.value = bag_num()
                 print("camera loop:", self.num.value)
                 self.run_cam()
