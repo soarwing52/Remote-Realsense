@@ -139,9 +139,10 @@ def GPS(Location,gps_on, root):
     serialPort.open()
     print ('GPS opened successfully')
     gps_on.value = 1
-    lon, lat = 0, 0
+    lon, lat = gps_information(serialPort)
+    gps_on.value = 2
     try:
-        while gps_on.value != 0:
+        while gps_on.value != 99:
             lon, lat = gps_information(serialPort)
             Location[:] = [lon, lat]
             with open('{}location.csv'.format(root), 'w') as gps:
@@ -155,6 +156,7 @@ def GPS(Location,gps_on, root):
     finally:
         serialPort.close()
         print('GPS finish')
+        gps_on.value = 0
 
 
 def Camera(child_conn, take_pic, frame_num, camera_status, bag):
@@ -221,7 +223,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     finally:
         print('pipeline closed')
-        camera_status.value = 98
+
 
 
 
@@ -293,8 +295,8 @@ class RScam:
                 cam_process.start()
                 self.command_receiver(parent_conn, bag)
                 print('end one round')
-
-        self.gps_status.value = 0
+        self.camera_command.value = 0
+        self.gps_status.value = 99
 
     def command_receiver(self, parent_conn, bag):
         auto = False
@@ -329,6 +331,8 @@ class RScam:
                 print('take manual')
                 local_take_pic = True
                 self.camera_command.value = 1
+            elif cmd == 2:
+                break
 
             if auto is True:
                 if gps_dis(current_location, foto_location) > 15:
