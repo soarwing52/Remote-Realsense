@@ -215,9 +215,6 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 recorder.pause()
                 take_pic.value = 0
 
-            if camera_status.value == 2:
-                break
-
         child_conn.close()
         pipeline.stop()
 
@@ -226,9 +223,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     finally:
         print('pipeline closed')
-        if camera_status.value == 99:
-            camera_status.value = 98
-            print('camera quit')
+        camera_status.value = 0
 
 
 def bag_num():
@@ -282,6 +277,9 @@ class RScam:
         self.img = cv2.imencode('.jpg', jpg)[1].tobytes()
         
         self.auto = False
+        self.restart = True
+        self.command = None
+        self.distance = 15
 
     def start_gps(self):
         # Start GPS process
@@ -289,7 +287,7 @@ class RScam:
         gps_process.start()
 
     def main_loop(self):
-        while self.camera_command.value < 90:
+        while self.restart:
             print("mainloop", self.gps_status.value, self.camera_command.value)
             time.sleep(2)
             if self.gps_status.value == 3:
@@ -329,23 +327,21 @@ class RScam:
             if self.take_pic.value == 1 or current_location == foto_location:
                 continue
 
-            cmd = self.camera_command.value
-            if cmd == 11:
+            cmd = self.command
+            if cmd == 'auto':
                 self.auto = True
-                self.camera_command.value = 1
-            elif cmd == 12:
+            elif cmd == "pause":
                 self.auto = False
-                self.camera_command.value = 1
-            elif cmd == 3:
+            elif cmd == "shot":
                 print('take manual')
                 local_take_pic = True
-                self.camera_command.value = 1
-            elif cmd == 2:
+            elif cmd == "restart" or cmd == "quit":
+                self.camera_command .value = 99
                 print("close main")
                 break
+            self.command = None
 
-            if self.auto:
-                if gps_dis(current_location, foto_location) > 15:
+            if self.auto and gps_dis(current_location, foto_location) > self.distance:
                     local_take_pic = True
 
             if local_take_pic:

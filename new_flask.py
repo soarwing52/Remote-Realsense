@@ -47,7 +47,9 @@ def command(cmd):
         return ans
     else:
         try:
-            a.camera_command.value = camera_command_dict[cmd]
+            a.command = cmd
+            if cmd == 'quit':
+                a.restart = False
         except KeyError:
             return "{} not allowed".format(cmd)
         finally:
@@ -55,10 +57,7 @@ def command(cmd):
 
 @app.route('/auto/<in_text>')
 def auto(in_text):
-    if in_text == 'true':
-        a.camera_command.value = 11
-    elif in_text == 'false':
-        a.camera_command.value = 12
+    a.command = in_text
 
     return in_text
 
@@ -66,7 +65,7 @@ def auto(in_text):
 @app.route('/dis/<num>')
 def set_dist(num):
     print(num, type(num))
-    a.distance.value = int(num)
+    a.distance = int(num)
     return num
 
 if __name__ == '__main__':
