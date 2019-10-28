@@ -117,7 +117,7 @@ def gps_information(port):
     return lon, lat
 
 
-def GPS(Location,gps_on):
+def GPS(Location,gps_on, root):
     """
     the main function of starting the GPS
     :param Location: mp.Array
@@ -140,7 +140,7 @@ def GPS(Location,gps_on):
         while gps_on.value != 0:
             lon, lat = gps_information(serialPort)
             Location[:] = [lon, lat]
-            with open('location.csv', 'w') as gps:
+            with open('{}location.csv'.format(root), 'w') as gps:
                 gps.write('Lat,Lon\n')
                 gps.write('{},{}'.format(lat,lon))
         #print(lon, lat)
@@ -164,6 +164,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
     :return:
     """
     print('camera start')
+    print(bag)
     try:
         pipeline = rs.pipeline()
         config = rs.config()
@@ -185,7 +186,12 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
         while camera_status.value != 99:
             frames = pipeline.wait_for_frames()
-            child_conn.send(frames)
+            depth_frame = frames.get_depth_frame()
+            color_frame = frames.get_color_frame()
+            depth_color_frame = rs.colorizer().colorize(depth_frame)
+            depth_image = np.asanyarray(depth_color_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+            child_conn.send((color_image, depth_image))
 
             if take_pic.value == 1:
                 recorder.resume()
@@ -241,7 +247,7 @@ class RScam:
         if sys.platform == "linux":
             self.root_dir = '/home/pi/RR/'
         else:
-            self.root_dir = './'
+            self.root_dir = ''
 
         folder_list = ('bag', 'foto_log')
 
@@ -260,7 +266,7 @@ class RScam:
 
     def start_gps(self):
         # Start GPS process
-        gps_process = mp.Process(target=GPS, args=(self.Location,self.gps_status,))
+        gps_process = mp.Process(target=GPS, args=(self.Location,self.gps_status,self.root_dir,))
         gps_process.start()
 
     def main_loop(self):
@@ -272,9 +278,9 @@ class RScam:
             else:
                 parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
-                bag_name = "{}{}.bag".format(self.root_dir, bag)
+                bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
                 cam_proccess = mp.Process(target=Camera,
-                                          args=(child_conn, self.take_pic, self.Frame_num, self.camera_command, bag))
+                                          args=(child_conn, self.take_pic, self.Frame_num, self.camera_command, bag_name))
                 cam_proccess.start()
                 self.command_receiver(parent_conn, bag)
 
@@ -293,16 +299,11 @@ class RScam:
             date = '{},{},{},{}'.format(present.day, present.month, present.year, present.time())
             local_take_pic = False
 
-            frames = parent_conn.recv()
-            depth_frame = frames.get_depth_frame()
-            color_frame = frames.get_color_frame()
-            depth_color_frame = rs.colorizer().colorize(depth_frame)
-            depth_image = np.asanyarray(depth_color_frame.get_data())
-            color_image = np.asanyarray(color_frame.get_data())
+            color_image, depth_image = parent_conn.recv()
             depth_colormap_resize = cv2.resize(depth_image, (150, 150))
             color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
             color_cvt_2 = cv2.resize(color_cvt, (150, 150))
-            images = np.vstack((color_cvt_2, depth_colormap_resize))
+            images = np.hstack((color_cvt_2, depth_colormap_resize))
             self.img = cv2.imencode('.jpg', images)[1].tobytes()
 
             if self.take_pic.value == 1 or current_location == foto_location:

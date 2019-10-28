@@ -10,7 +10,7 @@ a = RScam()
 
 @app.route('/')
 def index():
-    return index
+    return "index"
 
 def gen():
     while True:
