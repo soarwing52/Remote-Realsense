@@ -5,9 +5,9 @@ import cv2
 import serial
 import datetime
 import time
-import os
+import os, sys
 from math import sin, cos, sqrt, atan2, radians
-from getch import pause_exit
+
 
 def dir_generate(dir_name):
     """
@@ -33,9 +33,10 @@ def port_check(gps_on):
     serialPort.parity = serial.PARITY_NONE
     serialPort.timeout = 2
     exist_port = None
-    for x in range(1, 10):
-        portnum = 'COM{}'.format(x)
-        serialPort.port = 'COM{}'.format(x)
+    win = ['COM{}'.format(x) for x in range(10)]
+    linux = ['/dev/ttbUSB{}'.format(x) for x in range(5)]
+    for x in (win + linux):
+        serialPort.port = x
         try:
             serialPort.open()
             serialPort.close()
@@ -50,6 +51,8 @@ def port_check(gps_on):
         print ('close other programs using gps or check if the gps is correctly connected')
         gps_on.value = 3
         os._exit(0)
+
+
 
 def gps_dis(location_1,location_2):
     """
@@ -77,34 +80,6 @@ def gps_dis(location_1,location_2):
     #print("Result:", distance)
     return distance
 
-def fake_gps(location, status, frame_num, take_pic ):
-    import random
-    foto_location = (0,0)
-    foto_frame = frame_num[0]
-    local_pic = False
-    i = 0
-    status.value = 1
-    while True:
-        lon, lat = random.random(), random.random()
-        current_location = [lon, lat]
-        location[:] = [lon, lat]
-
-        if take_pic.value == 1:
-            continue
-
-        if gps_dis(current_location, foto_location) > 15:
-            print('auto take pic')
-            local_pic = True
-
-        if local_pic:
-            take_pic.value = 1
-            (color_frame_num, depth_frame_num) = frame_num[:]
-            logmsg = '{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat)
-            print('Foto {} gemacht um {:.03},{:.04}'.format(i, lon, lat))
-            print(logmsg)
-            i += 1
-
-        time.sleep(3)
 
 def min2decimal(in_data):
     """
@@ -112,20 +87,15 @@ def min2decimal(in_data):
     :param in_data: lon / lat
     :return: in decimal poiints
     """
-    try:
-        latgps = float(in_data)
-        latdeg = int(latgps / 100)
-        latmin = latgps - latdeg * 100
-        lat = latdeg + (latmin / 60)
-    except ValueError:
-        print('gps value error')
-        lat = 0
-
+    latgps = float(in_data)
+    latdeg = int(latgps / 100)
+    latmin = latgps - latdeg * 100
+    lat = latdeg + (latmin / 60)
     return lat
 
 
 def gps_information(port):
-    lon, lat = 0,0
+    lon, lat = 0, 0
     while lon == 0 or lat == 0:
         line = port.readline()
         data = line.split(b',')
@@ -140,7 +110,6 @@ def gps_information(port):
                 lat = min2decimal(data[2])
         time.sleep(1)
 
-
     with open('location.csv', 'w') as gps:
         gps.write('Lat,Lon\n')
         gps.write('{},{}'.format(lat, lon))
@@ -148,88 +117,98 @@ def gps_information(port):
     return lon, lat
 
 
-def gps_main(location, gps_status, weg_num, frame_num, camera_command, take_pic):
+def GPS(Location,gps_on):
     """
-
-    :param location:
-    :param gps_status:
-    :param frame_num:
-    :param take_pic:
+    the main function of starting the GPS
+    :param Location: mp.Array
+    :param gps_on: mp.Value
     :return:
     """
     print('GPS thread start')
+    # Set port
+    serialPort = serial.Serial()
+    serialPort.port = port_check(gps_on) # Check the available ports, return the valid one
+    serialPort.baudrate = 4800
+    serialPort.bytesize = serial.EIGHTBITS
+    serialPort.parity = serial.PARITY_NONE
+    serialPort.timeout = 2
+    serialPort.open()
+    print ('GPS opened successfully')
+    gps_on.value = 1
+    lon, lat = 0, 0
     try:
-        # Set port
-        serialPort = serial.Serial()
-        serialPort.port = port_check(gps_status)  # Check the available ports, return the valid one
-        serialPort.baudrate = 4800
-        serialPort.bytesize = serial.EIGHTBITS
-        serialPort.parity = serial.PARITY_NONE
-        serialPort.timeout = 2
-        serialPort.open()
-        print('GPS opened successfully')
-        local_pic = False
-        foto_location = (0,0)
-        i = 1
-        gps_status.value = 1
-        auto = False
-        current_weg_num = weg_num.value
-        while True:
+        while gps_on.value != 0:
             lon, lat = gps_information(serialPort)
-            current_location = (lon, lat)
-            location[:] = [lon,lat]
-
-            print('command' , camera_command.value)
-            if camera_command.value == 11:
-                auto = True
-                camera_command.value = 1
-            elif camera_command.value == 12:
-                auto = False
-                camera_command.value = 1
-            elif camera_command.value == 3:
-                print('take manual')
-                local_pic = True
-                camera_command.value = 1
-            elif camera_command.value == 99:
-                break
-
-            if auto:# and gps_dis(current_location, foto_location) > 15:
-                #print(gps_dis(current_location, foto_location))
-                print('auto take pic')
-                local_pic = True
-
-            if camera_command.value != 1 or take_pic.value == 3:# or current_location == foto_location:
-                local_pic = False
-                print('continue')
-                continue
-
-            if current_weg_num != weg_num.value:
-                i = 1
-                current_weg_num = weg_num.value
-
-            if local_pic:
-                local_pic = False
-                take_pic.value = 3
-                now = datetime.datetime.now()
-                date = '{},{},{},{}'.format(now.day, now.month, now.year, now.time())
-                (color_frame_num, depth_frame_num) = frame_num[:]
-                logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
-                print('Foto {} gemacht um {:.03},{:.04}, weg num: {}'.format(i, lon, lat, weg_num.value))
-                with open('foto_log/{:02d}{:02d}_{:03d}.txt'.format(now.month, now.day, weg_num.value), 'a') as log:
-                    log.write(logmsg)
-                i += 1
-                foto_location = (lon, lat)
-
-
-        serialPort.close()
-        gps_status.value = 0
+            Location[:] = [lon, lat]
+            with open('location.csv', 'w') as gps:
+                gps.write('Lat,Lon\n')
+                gps.write('{},{}'.format(lat,lon))
+        #print(lon, lat)
 
     except serial.SerialException:
         print ('Error opening GPS')
-        gps_status.value = 3
+        gps_on.value = 3
+    finally:
+        serialPort.close()
+        print('GPS finish')
+
+
+def Camera(child_conn, take_pic, frame_num, camera_status, bag):
+    """
+    Main camera running
+    :param child_conn: source of image, sending to openCV
+    :param take_pic: mp.Value, receive True will take one picture, and send back False when done
+    :param frame_num: mp.Array, frame number of the picture taken
+    :param camera_status: mp.Value, the status of camera
+    :param bag: the number of the current recorded file
+    :return:
+    """
+    print('camera start')
+    try:
+        bag_name = './bag/{}.bag'.format(bag)
+        pipeline = rs.pipeline()
+        config = rs.config()
+        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
+        config.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 15)
+        config.enable_record_to_file(bag_name)
+        profile = pipeline.start(config)
+
+        device = profile.get_device() # get record device
+        recorder = device.as_recorder()
+        recorder.pause() # and pause it
+
+        # set frame queue size to max
+        sensor = profile.get_device().query_sensors()
+        for x in sensor:
+            x.set_option(rs.option.frames_queue_size, 32)
+        # set auto exposure but process data first
+        color_sensor = profile.get_device().query_sensors()[1]
+        color_sensor.set_option(rs.option.auto_exposure_priority, True)
+        while camera_status.value != 99:
+            frames = pipeline.wait_for_frames()
+            child_conn.send(frames)
+
+            if take_pic.value == 1:
+                recorder.resume()
+                frames = pipeline.wait_for_frames()
+                depth_frame = frames.get_depth_frame()
+                color_frame = frames.get_color_frame()
+                var = rs.frame.get_frame_number(color_frame)
+                vard = rs.frame.get_frame_number(depth_frame)
+                frame_num[:] = [var, vard]
+                time.sleep(0.05)
+                recorder.pause()
+                take_pic.value = 0
+
+        child_conn.close()
+        pipeline.stop()
+
+    except RuntimeError:
+        print ('run')
 
     finally:
-        print('GPS finish')
+        print('pipeline closed')
+        camera_status.value = 98
 
 
 def bag_num():
@@ -239,6 +218,7 @@ def bag_num():
     """
     num = 1
     now = datetime.datetime.now()
+    time.sleep(1)
 
     try:
         while True:
@@ -246,105 +226,116 @@ def bag_num():
             bag_name = './bag/{}.bag'.format(file_name)
             exist = os.path.isfile(bag_name)
             if exist:
-                num+=1
+                num += 1
             else:
+                print ('current filename:{}'.format(file_name))
                 break
-        return num
+        return file_name
     finally:
         pass
 
 
 class RScam:
     def __init__(self):
+        # Create Folders for Data
+
+        if sys.platform == "linux":
+            self.root_dir = '/home/pi/RR/'
+        else:
+            self.root_dir = './'
+
         folder_list = ('bag', 'foto_log')
+
         for folder in folder_list:
-            dir_generate(folder)
-        self.num = mp.Value('i', bag_num())
+            dir_generate(self.root_dir + folder)
+        # Create Variables between Processes
+        self.Location = mp.Array('d',[0,0])
+        self.Frame_num = mp.Array('i',[0,0])
+
+        self.take_pic = mp.Value('i',0)
+        self.camera_command = mp.Value('i',0)
+        self.gps_status = mp.Value('i',0)
+
         jpg = cv2.imread('jpg.jpeg')
         self.img = cv2.imencode('.jpg', jpg)[1].tobytes()
-        self.location = mp.Array('d', [0, 0])
-        self.frame_num = mp.Array('i', [0, 0])
-        self.camera_command = mp.Value('i', 0)
-        self.take_pic = mp.Value('i', 0)
-        self.gps_status = mp.Value('i', 0)
 
-    def camera_loop(self):
-        while self.camera_command.value != 99:
-            print('camera loop', self.camera_command.value)
-            if self.gps_status.value == 1:
-                self.num.value = bag_num()
-                print("camera loop:", self.num.value)
-                self.run_cam()
-
-            elif self.gps_status == 3:
-                break
-            else:
-                time.sleep(1)
-
-        while True:
-            if self.gps_status.value == 0:
-                self.camera_command.value = 0
-                break
-
-    def run_cam(self):
-        try:
-            now = datetime.datetime.now()
-            file_name = '{:02d}{:02d}_{:03d}'.format(now.month, now.day, self.num.value)
-            bag_name = './bag/{}.bag'.format(file_name)
-            print('start camera with ', bag_name)
-            pipeline = rs.pipeline()
-            config = rs.config()
-            config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
-            config.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 15)
-            config.enable_record_to_file(bag_name)
-            profile = pipeline.start(config)
-
-            device = profile.get_device()  # get record device
-            recorder = device.as_recorder()
-            recorder.pause()
-            self.camera_command.value = 1
-            self.take_pic.value = 1
-
-            while True:
-                frames = pipeline.wait_for_frames()
-
-                depth_frame = frames.get_depth_frame()
-                color_frame = frames.get_color_frame()
-                depth_color_frame = rs.colorizer().colorize(depth_frame)
-                depth_image = np.asanyarray(depth_color_frame.get_data())
-                color_image = np.asanyarray(color_frame.get_data())
-                depth_colormap_resize = cv2.resize(depth_image, (150, 150))
-                color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-                color_cvt_2 = cv2.resize(color_cvt, (150, 150))
-                images = np.hstack((color_cvt_2, depth_colormap_resize))
-
-                self.img = cv2.imencode('.jpg', images)[1].tobytes()
-                if self.take_pic.value == 3:
-                    print('take pic')
-                    recorder.resume()
-                    frames = pipeline.wait_for_frames()
-                    depth_frame = frames.get_depth_frame()
-                    color_frame = frames.get_color_frame()
-                    var = rs.frame.get_frame_number(color_frame)
-                    vard = rs.frame.get_frame_number(depth_frame)
-                    self.frame_num[:] = [var, vard]
-                    time.sleep(0.5)
-                    recorder.pause()
-                    self.take_pic.value = 1
-                    print("pic taken")
-
-                if self.camera_command.value in (2, 99):
-                    self.take_pic.value = 1
-                    break
-
-            pipeline.stop()
-        finally:
-            print('camera stopped')
-
-    def gps_on(self):
-        gps_process = mp.Process(target=gps_main, args=(self.location, self.gps_status, self.num, self.frame_num,
-                                                        self.camera_command, self.take_pic))
+    def start_gps(self):
+        # Start GPS process
+        gps_process = Process(target=GPS, args=(self.Location,self.gps_status,))
         gps_process.start()
 
-    def get_gps(self):
-        return (self.location[:])
+    def main_loop(self):
+        while self.camera_command.value != 99:
+            if self.gps_status.value == 3:
+                break
+            elif self.gps_status == 1:
+                time.sleep(1)
+            else:
+                parent_conn, child_conn = Pipe()
+                bag = bag_num()
+                cam_proccess = mp.Process(target=Camera,
+                                          args=(child_conn, self.take_pic, self.Frame_num, self.camera_command, bag))
+                cam_proccess.start()
+                self.command_receiver(parent_conn, bag)
+
+        self.gps_status.value = 0
+
+
+    def command_receiver(self, parent_conn, bag):
+        auto = False
+        i = 1
+        foto_location = (0, 0)
+        foto_frame = self.Frame_num[0]
+        while self.camera_command.value != 98:
+            (lon, lat) = self.Location[:]
+            current_location = (lon, lat)
+            present = datetime.datetime.now()
+            date = '{},{},{},{}'.format(present.day, present.month, present.year, present.time())
+            local_take_pic = False
+
+            frames = parent_conn.recv()
+            depth_frame = frames.get_depth_frame()
+            color_frame = frames.get_color_frame()
+            depth_color_frame = rs.colorizer().colorize(depth_frame)
+            depth_image = np.asanyarray(depth_color_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+            depth_colormap_resize = cv2.resize(depth_image, (150, 150))
+            color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+            color_cvt_2 = cv2.resize(color_cvt, (150, 150))
+            images = np.vstack((color_cvt_2, depth_colormap_resize))
+            self.img = cv2.imencode('.jpg', images)[1].tobytes()
+
+            if self.take_pic.value == 1 or current_location == foto_location:
+                continue
+
+            cmd = self.camera_command.value
+            if cmd == 11:
+                auto = True
+                self.camera_command.value = 1
+            elif cmd == 12:
+                auto = False
+                self.camera_command.value = 1
+            elif cmd == 3:
+                print('take manual')
+                local_take_pic = True
+                self.camera_command.value = 1
+
+            if auto is True:
+                if gps_dis(current_location, foto_location) > 15:
+                    local_take_pic = True
+
+            if local_take_pic:
+                self.take_pic.value = 1
+                time.sleep(0.1)
+                (color_frame_num, depth_frame_num) = self.Frame_num[:]
+                logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
+                print('Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat))
+                with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
+                    logfile.write(logmsg)
+                with open('{}foto_location.csv'.format(self.root_dir), 'a') as record:
+                    record.write(logmsg)
+                foto_location = (lon, lat)
+                i += 1
+
+if __name__ == '__main__':
+    pass

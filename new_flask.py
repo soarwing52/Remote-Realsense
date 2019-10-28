@@ -1,5 +1,5 @@
 from flask import Flask, render_template, Response, request
-from pi_command import RScam
+from new_command import RScam
 import threading
 
 index = """ <h1>Image Stream </h1>
@@ -29,13 +29,13 @@ def command(cmd):
                            "auto": 11, "pause": 12}
     if cmd == 'start':
         if a.gps_status.value == 0:
-            a.gps_on()
+            a.start_gps()
             return "starting gps"
-        elif a.gps_status.value == 2 and a.camera_command.value == 0:
-            t = threading.Thread(target=a.camera_loop)
+        elif a.gps_status.value == 1 and a.camera_command.value == 0:
+            t = threading.Thread(target=a.main_loop)
             t.start()
             return "started camera"
-        elif a.gps_status.value == 1:
+        elif a.gps_status.value == 2:
             print("wait for signal")
             return "waiting for signal"
         else:
