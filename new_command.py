@@ -96,24 +96,28 @@ def min2decimal(in_data):
 
 def gps_information(port):
     lon, lat = 0, 0
-    while lon == 0 or lat == 0:
-        line = port.readline()
-        data = line.split(b',')
-        data = [x.decode("UTF-8") for x in data]
-        if data[0] == '$GPRMC':
-            if data[2] == "A":
-                lat = min2decimal(data[3])
-                lon = min2decimal(data[5])
-        elif data[0] == '$GPGGA':
-            if data[6] == '1':
-                lon = min2decimal(data[4])
-                lat = min2decimal(data[2])
-        time.sleep(1)
+    try:
+        while lon == 0 or lat == 0:
+            line = port.readline()
+            data = line.split(b',')
+            data = [x.decode("UTF-8") for x in data]
+            if data[0] == '$GPRMC':
+                if data[2] == "A":
+                    lat = min2decimal(data[3])
+                    lon = min2decimal(data[5])
+            elif data[0] == '$GPGGA':
+                if data[6] == '1':
+                    lon = min2decimal(data[4])
+                    lat = min2decimal(data[2])
+            time.sleep(1)
+            print("return", lon, lat)
+    except UnicodeDecodeError:
+        print('decode error')
 
     with open('location.csv', 'w') as gps:
         gps.write('Lat,Lon\n')
         gps.write('{},{}'.format(lat, lon))
-
+    
     return lon, lat
 
 
@@ -217,6 +221,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     finally:
         print('pipeline closed')
+        camera_status.value = 98
 
 
 
@@ -287,6 +292,7 @@ class RScam:
                                                               self.Frame_num, self.camera_command, bag_name))
                 cam_process.start()
                 self.command_receiver(parent_conn, bag)
+                print('end one round')
 
         self.gps_status.value = 0
 
@@ -323,8 +329,6 @@ class RScam:
                 print('take manual')
                 local_take_pic = True
                 self.camera_command.value = 1
-            elif cmd == 2:
-                break
 
             if auto is True:
                 if gps_dis(current_location, foto_location) > 15:
@@ -342,6 +346,7 @@ class RScam:
                     record.write(logmsg)
                 foto_location = (lon, lat)
                 i += 1
+        print("main closed")
 
 if __name__ == '__main__':
     pass
