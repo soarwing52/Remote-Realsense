@@ -294,7 +294,7 @@ class RScam:
                 break
             elif self.gps_status.value == 2:
                 time.sleep(1)
-            elif self.gps_status.value == 1:
+            elif self.gps_status.value == 1 and self.camera_command.value == 0:
                 parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
                 bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
@@ -328,15 +328,17 @@ class RScam:
                 continue
 
             cmd = self.command
-            if cmd == 'auto':
+            if cmd == 'true':
                 self.auto = True
-            elif cmd == "pause":
+            elif cmd == "false":
                 self.auto = False
             elif cmd == "shot":
                 print('take manual')
                 local_take_pic = True
             elif cmd == "restart" or cmd == "quit":
-                self.camera_command .value = 99
+                self.camera_command.value = 99
+                while self.camera_command.value != 0:
+                    pass
                 print("close main")
                 break
             self.command = None
