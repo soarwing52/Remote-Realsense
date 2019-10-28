@@ -110,7 +110,10 @@ def gps_information(port):
                     lon = min2decimal(data[4])
                     lat = min2decimal(data[2])
             time.sleep(1)
-            print("return", lon, lat)
+            import random
+            if lon == 0 or lat == 0:
+                lon, lat = random.random(), random.random()
+        #print("return", lon, lat)
     except UnicodeDecodeError:
         print('decode error')
 
@@ -138,9 +141,9 @@ def GPS(Location,gps_on, root):
     serialPort.timeout = 2
     serialPort.open()
     print ('GPS opened successfully')
-    gps_on.value = 1
-    lon, lat = gps_information(serialPort)
     gps_on.value = 2
+    lon, lat = gps_information(serialPort)
+    gps_on.value = 1
     try:
         while gps_on.value != 99:
             lon, lat = gps_information(serialPort)
@@ -223,8 +226,9 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     finally:
         print('pipeline closed')
-
-
+        if camera_status.value == 99:
+            camera_status.value = 98
+            print('camera quit')
 
 
 def bag_num():
@@ -239,7 +243,9 @@ def bag_num():
     try:
         while True:
             file_name = '{:02d}{:02d}_{:03d}'.format(now.month, now.day, num)
-            bag_name = './bag/{}.bag'.format(file_name)
+            bag_name = 'bag/{}.bag'.format(file_name)
+            if sys.platform == 'linux':
+                bag_name = "/home/pi/RR/" + bag_name
             exist = os.path.isfile(bag_name)
             if exist:
                 num += 1
@@ -274,6 +280,8 @@ class RScam:
 
         jpg = cv2.imread('jpg.jpeg')
         self.img = cv2.imencode('.jpg', jpg)[1].tobytes()
+        
+        self.auto = False
 
     def start_gps(self):
         # Start GPS process
@@ -282,11 +290,13 @@ class RScam:
 
     def main_loop(self):
         while self.camera_command.value < 90:
+            print("mainloop", self.gps_status.value, self.camera_command.value)
+            time.sleep(2)
             if self.gps_status.value == 3:
                 break
-            elif self.gps_status == 1:
+            elif self.gps_status.value == 2:
                 time.sleep(1)
-            elif self.camera_command.value == 0:
+            elif self.gps_status.value == 1:
                 parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
                 bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
@@ -299,7 +309,6 @@ class RScam:
         self.gps_status.value = 99
 
     def command_receiver(self, parent_conn, bag):
-        auto = False
         i = 1
         foto_location = (0, 0)
         foto_frame = self.Frame_num[0]
@@ -322,19 +331,20 @@ class RScam:
 
             cmd = self.camera_command.value
             if cmd == 11:
-                auto = True
+                self.auto = True
                 self.camera_command.value = 1
             elif cmd == 12:
-                auto = False
+                self.auto = False
                 self.camera_command.value = 1
             elif cmd == 3:
                 print('take manual')
                 local_take_pic = True
                 self.camera_command.value = 1
             elif cmd == 2:
+                print("close main")
                 break
 
-            if auto is True:
+            if self.auto:
                 if gps_dis(current_location, foto_location) > 15:
                     local_take_pic = True
 

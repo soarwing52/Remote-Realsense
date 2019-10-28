@@ -2,6 +2,7 @@ from flask import Flask, render_template, Response, request
 from new_command import RScam
 import threading
 
+RUNNING = False
 index = """ <h1>Image Stream </h1>
     <img src="{{ url_for('video_feed') }}">"""
 app = Flask(__name__)
@@ -30,10 +31,9 @@ def command(cmd):
     if cmd == 'start':
         if a.gps_status.value == 0:
             a.start_gps()
-            return "starting gps"
-        elif a.gps_status.value == 1 and a.camera_command.value == 0:
             t = threading.Thread(target=a.main_loop)
             t.start()
+            print("start loop")
             return "started camera"
         elif a.gps_status.value == 2:
             print("wait for signal")
