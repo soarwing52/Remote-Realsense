@@ -289,7 +289,6 @@ class RScam:
     def main_loop(self):
         while self.restart:
             print("mainloop", self.gps_status.value, self.camera_command.value)
-            time.sleep(2)
             if self.gps_status.value == 3:
                 break
             elif self.gps_status.value == 2:
@@ -338,8 +337,12 @@ class RScam:
             elif cmd == "restart" or cmd == "quit":
                 self.camera_command.value = 99
                 while self.camera_command.value != 0:
+                    parent_conn.recv()
+                    print('waiting for camera to close')
+                    time.sleep(1)
                     pass
                 print("close main")
+                self.command = None
                 break
             self.command = None
 

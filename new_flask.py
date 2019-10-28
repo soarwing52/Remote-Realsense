@@ -31,8 +31,10 @@ def command(cmd):
     if cmd == 'start':
         if a.gps_status.value == 0:
             a.start_gps()
+            a.restart = True
             t = threading.Thread(target=a.main_loop)
             t.start()
+            
             print("start loop")
             return "started camera"
         elif a.gps_status.value == 2:
