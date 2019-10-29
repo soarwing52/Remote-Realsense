@@ -110,16 +110,12 @@ def gps_information(port):
                     lon = min2decimal(data[4])
                     lat = min2decimal(data[2])
             time.sleep(1)
-            import random
-            if lon == 0 or lat == 0:
-                lon, lat = random.random(), random.random()
+            #import random
+            #if lon == 0 or lat == 0:
+            #    lon, lat = random.random(), random.random()
         #print("return", lon, lat)
     except UnicodeDecodeError:
         print('decode error')
-
-    with open('location.csv', 'w') as gps:
-        gps.write('Lat,Lon\n')
-        gps.write('{},{}'.format(lat, lon))
     
     return lon, lat
 
@@ -372,6 +368,7 @@ class RScam:
                 
         print("main closed")
         self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
+
 
 if __name__ == '__main__':
     pass

@@ -1,8 +1,7 @@
-from flask import Flask, render_template, Response, request
-from new_command import RScam
+from flask import Flask, render_template, Response
+from command_class import RScam
 import threading
 
-RUNNING = False
 index = """ <h1>Image Stream </h1>
     <img src="{{ url_for('video_feed') }}">"""
 app = Flask(__name__)
@@ -34,7 +33,6 @@ def command(cmd):
             a.restart = True
             t = threading.Thread(target=a.main_loop)
             t.start()
-            
             print("start loop")
             return "started camera"
         elif a.gps_status.value == 2:
@@ -57,10 +55,10 @@ def command(cmd):
         finally:
             return cmd
 
+
 @app.route('/auto/<in_text>')
 def auto(in_text):
     a.command = in_text
-
     return in_text
 
 
@@ -69,6 +67,7 @@ def set_dist(num):
     print(num, type(num))
     a.distance = int(num)
     return num
+
 
 if __name__ == '__main__':
     try:
