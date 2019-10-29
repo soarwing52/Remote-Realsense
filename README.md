@@ -1,12 +1,8 @@
 # Remote-Realsense
-creating a webapp controlling raspberry pi4 with D435 camera
+creating a webapp controlling raspberry pi4 with D435 camera doing road survey
 
 # Structure
 A Flask webapp for tablets to use
-
-A script to setup two sockets connecting the webapp
-
-the connection is two sockets for image from script to webapp
 
 and command from webapp to script
 
@@ -21,4 +17,16 @@ the structure is same as my repository https://github.com/soarwing52/RealsensePy
 
 just transferring to wireless control from tablet
 
+When start: the app will start Process GPS, and then thread command reciever, and Process Camera
+
+restart will only restart new thread of command and Process Camera
+
+Foto will can take manual photo
+
+switching on/off auto mode will define if it takes a photo every 15 meters
+
+the droplist can define the distance for frequency
+
+the app link:
+http://ai2.appinventor.mit.edu/?galleryId=6709518832107520
 
