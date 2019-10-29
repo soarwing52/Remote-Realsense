@@ -213,7 +213,8 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 frame_num[:] = [var, vard]
                 time.sleep(0.05)
                 recorder.pause()
-                take_pic.value = 0
+                print('taken', frame_num[:])
+                take_pic.value = 2
 
         child_conn.close()
         pipeline.stop()
@@ -272,9 +273,12 @@ class RScam:
         self.take_pic = mp.Value('i',0)
         self.camera_command = mp.Value('i',0)
         self.gps_status = mp.Value('i',0)
-
-        jpg = cv2.imread('jpg.jpeg')
-        self.img = cv2.imencode('.jpg', jpg)[1].tobytes()
+        jpg_path = "/home/pi/RR/jpg.jpeg"
+        if os.path.isfile(jpg_path):
+            self.jpg = cv2.imread(jpg_path)
+        else:
+            self.jpg = cv2.imread('jpg.jpeg')
+        self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
         
         self.auto = False
         self.restart = True
@@ -288,7 +292,6 @@ class RScam:
 
     def main_loop(self):
         while self.restart:
-            print("mainloop", self.gps_status.value, self.camera_command.value)
             if self.gps_status.value == 3:
                 break
             elif self.gps_status.value == 2:
@@ -304,11 +307,13 @@ class RScam:
                 print('end one round')
         self.camera_command.value = 0
         self.gps_status.value = 99
+        self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
 
     def command_receiver(self, parent_conn, bag):
         i = 1
         foto_location = (0, 0)
-        foto_frame = self.Frame_num[0]
+        color_frame_num, depth_frame_num = self.Frame_num[:]
+        print(color_frame_num, depth_frame_num)
         while self.camera_command.value != 98:
             (lon, lat) = self.Location[:]
             current_location = (lon, lat)
@@ -322,8 +327,21 @@ class RScam:
             color_cvt_2 = cv2.resize(color_cvt, (150, 150))
             images = np.hstack((color_cvt_2, depth_colormap_resize))
             self.img = cv2.imencode('.jpg', images)[1].tobytes()
+            
+            if self.take_pic.value == 2:
+                color_frame_num, depth_frame_num = self.Frame_num[:]
+                print(color_frame_num, depth_frame_num)
+                logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
+                print('Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat))
+                with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
+                    logfile.write(logmsg)
+                with open('{}foto_location.csv'.format(self.root_dir), 'a') as record:
+                    record.write(logmsg)
+                foto_location = (lon, lat)
+                i += 1
+                self.take_pic.value = 0
 
-            if self.take_pic.value == 1 or current_location == foto_location:
+            if self.take_pic.value in (1,2) or current_location == foto_location:
                 continue
 
             cmd = self.command
@@ -351,17 +369,9 @@ class RScam:
 
             if local_take_pic:
                 self.take_pic.value = 1
-                time.sleep(0.1)
-                (color_frame_num, depth_frame_num) = self.Frame_num[:]
-                logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
-                print('Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat))
-                with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
-                    logfile.write(logmsg)
-                with open('{}foto_location.csv'.format(self.root_dir), 'a') as record:
-                    record.write(logmsg)
-                foto_location = (lon, lat)
-                i += 1
+                
         print("main closed")
+        self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
 
 if __name__ == '__main__':
     pass
