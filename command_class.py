@@ -50,8 +50,6 @@ def port_check(gps_on):
     else:
         print ('close other programs using gps or check if the gps is correctly connected')
         gps_on.value = 3
-        os._exit(0)
-
 
 
 def gps_dis(location_1,location_2):
@@ -122,9 +120,10 @@ def gps_information(port):
 
 def GPS(Location,gps_on, root):
     """
-    the main function of starting the GPS
-    :param Location: mp.Array
-    :param gps_on: mp.Value
+
+    :param Location: mp.Array fot longitude, latitude
+    :param gps_on: gps status 0 for resting, 1 for looking for signal, 2 for signal got, 3 for error
+    :param root: root dir for linux at /home/pi
     :return:
     """
     print('GPS thread start')
@@ -160,16 +159,15 @@ def GPS(Location,gps_on, root):
 
 def Camera(child_conn, take_pic, frame_num, camera_status, bag):
     """
-    Main camera running
-    :param child_conn: source of image, sending to openCV
-    :param take_pic: mp.Value, receive True will take one picture, and send back False when done
-    :param frame_num: mp.Array, frame number of the picture taken
-    :param camera_status: mp.Value, the status of camera
-    :param bag: the number of the current recorded file
+
+    :param child_conn: mp.Pipe for image
+    :param take_pic: take pic command, 0 for rest, 1 for take one pic, after taken is 2, log file will turn back to 0
+    :param frame_num: mp.Array for frame number
+    :param camera_status: 0 for rest, 1 for running, 99 for end
+    :param bag: bag path /home/pi/bag
     :return:
     """
     print('camera start')
-    print(bag)
     try:
         pipeline = rs.pipeline()
         config = rs.config()
@@ -308,8 +306,6 @@ class RScam:
     def command_receiver(self, parent_conn, bag):
         i = 1
         foto_location = (0, 0)
-        color_frame_num, depth_frame_num = self.Frame_num[:]
-        print(color_frame_num, depth_frame_num)
         while self.camera_command.value != 98:
             (lon, lat) = self.Location[:]
             current_location = (lon, lat)
@@ -337,7 +333,7 @@ class RScam:
                 i += 1
                 self.take_pic.value = 0
 
-            if self.take_pic.value in (1,2) or current_location == foto_location:
+            if self.take_pic.value in (1, 2) or current_location == foto_location:
                 continue
 
             cmd = self.command
