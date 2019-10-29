@@ -27,3 +27,6 @@ switching on/off auto mode will define if it takes a photo every 15 meters
 
 the droplist can define the distance for frequency
 
+the app link:
+http://ai2.appinventor.mit.edu/?galleryId=6709518832107520
+
