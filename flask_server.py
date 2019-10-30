@@ -10,50 +10,52 @@ a = RScam()
 
 @app.route('/')
 def index():
-    return "index"
+    msg = str(a.Location[:])
+    return render_template('ui.html', msg = 'mmssgg')
+
 
 def gen():
     while True:
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + a.img + b'\r\n')
 
+
 @app.route('/video_feed')
-def video():
+def video_feed():
     return Response(gen(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/cmd/<cmd>')
 def command(cmd):
-    camera_command_dict = {"": 0, "running": 1, "restart": 2, "shot": 3, "quit": 99,
-                           "auto": 11, "pause": 12}
+    msg = ""
     if cmd == 'start':
         if a.gps_status.value == 0:
             a.start_gps()
             a.restart = True
             t = threading.Thread(target=a.main_loop)
             t.start()
-            print("start loop")
-            return "started camera"
+            msg = 'start loop'
+
         elif a.gps_status.value == 2:
-            print("wait for signal")
-            return "waiting for signal"
+            msg = "wait for signal"
         else:
-            print(a.gps_status.value, a.camera_command.value)
-            return "start but waiting GPS"
+            msg = "GPS:{},Camera{} \n {}". format(a.gps_status.value, a.camera_command.value, str(a.Location[:]))
     elif cmd == "gps":
-        ans = str(a.Location[:])
-        print(ans)
-        return ans
+        msg = str(a.Location[:])
     else:
         try:
             a.command = cmd
+            msg = '{},{}'.format(cmd, a.msg)
             if cmd == 'quit':
                 a.restart = False
+                msg = 'quit'
         except KeyError:
-            return "{} not allowed".format(cmd)
+            msg = "{} not allowed".format(cmd)
         finally:
-            return cmd
+            pass
+    print(msg)
+    return render_template('ui.html', msg=msg)
 
 
 @app.route('/auto/<in_text>')

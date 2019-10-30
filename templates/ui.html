@@ -3,26 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <link rel="stylesheet" href="../static/style.css/">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
    <center><body>
+
         <h1>
-                Start (1)
-                <a href="/zombie" class="button">Activate</a>
+                <a href="/cmd/start" class="button">Start</a>
+                <a href="/cmd/restart" class="button">Restart</a>
+                <a href="/cmd/shot" class="button">Foto</a>
+                <a href="/cmd/quit" class="button">Quit</a>
+        </h1>
+        <h1> {{ msg }}</h1>
+        <h1>
+        <form action="/dis/" method="get">
+            <input type="number" name="spin"  required>
+            <input type="submit" name="distance" value="Switch distance">
 
-                Restart (2)
-                <a href="/stonewolf" class="button">Activate</a>
+        Auto mode
 
-                Foto (3)
-                <a href="/werewolf" class="button">Activate</a>
+            <label class="switch">
+            <input type="checkbox" name="auto">
+            <span class="slider round"></span>
+            </label>
+            </form>
+        </h1>
 
-                Quit (4)
-                <a href="/pumpkin" class="button">Activate</a>
+       <img src="{{ url_for('video_feed') }}">
+   </center>
 
-                Monster Mash
-                <a href="/monstermash" class="button">Activate</a>
-        </h1></center>
-    <img src="{{ url_for('video_feed') }}">
 </body>
 </html>

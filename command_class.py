@@ -112,8 +112,8 @@ def gps_information(port):
             if lon == 0 or lat == 0:
                 lon, lat = random.random(), random.random()
         #print("return", lon, lat)
-    except UnicodeDecodeError:
-        print('decode error')
+    except:
+        print('some error')
     
     return lon, lat
 
@@ -189,6 +189,14 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
         camera_status.value = 1
         while camera_status.value != 99:
+            frames = pipeline.wait_for_frames()
+            depth_frame = frames.get_depth_frame()
+            color_frame = frames.get_color_frame()
+            depth_color_frame = rs.colorizer().colorize(depth_frame)
+            depth_image = np.asanyarray(depth_color_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+            child_conn.send((color_image, depth_image))
+
             if take_pic.value == 1:
                 recorder.resume()
                 frames = pipeline.wait_for_frames()
@@ -210,7 +218,6 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     except RuntimeError:
         print ('run')
-        
 
     finally:
         print('pipeline closed')
@@ -274,6 +281,7 @@ class RScam:
         self.restart = True
         self.command = None
         self.distance = 15
+        self.msg = "initailzing"
 
     def start_gps(self):
         # Start GPS process
@@ -332,7 +340,8 @@ class RScam:
                 color_frame_num, depth_frame_num = self.Frame_num[:]
                 print(color_frame_num, depth_frame_num)
                 logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
-                print('Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat))
+                self.msg = 'Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat)
+                print(msg)
                 with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
                     logfile.write(logmsg)
                 with open('{}foto_location.csv'.format(self.root_dir), 'a') as record:
