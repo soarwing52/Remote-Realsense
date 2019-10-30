@@ -7,7 +7,7 @@ import datetime
 import time
 import os, sys
 from math import sin, cos, sqrt, atan2, radians
-
+import threading
 
 def dir_generate(dir_name):
     """
@@ -108,9 +108,9 @@ def gps_information(port):
                     lon = min2decimal(data[4])
                     lat = min2decimal(data[2])
             time.sleep(1)
-            #import random
-            #if lon == 0 or lat == 0:
-            #    lon, lat = random.random(), random.random()
+            import random
+            if lon == 0 or lat == 0:
+                lon, lat = random.random(), random.random()
         #print("return", lon, lat)
     except UnicodeDecodeError:
         print('decode error')
@@ -189,14 +189,6 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
         camera_status.value = 1
         while camera_status.value != 99:
-            frames = pipeline.wait_for_frames()
-            depth_frame = frames.get_depth_frame()
-            color_frame = frames.get_color_frame()
-            depth_color_frame = rs.colorizer().colorize(depth_frame)
-            depth_image = np.asanyarray(depth_color_frame.get_data())
-            color_image = np.asanyarray(color_frame.get_data())
-            child_conn.send((color_image, depth_image))
-
             if take_pic.value == 1:
                 recorder.resume()
                 frames = pipeline.wait_for_frames()
@@ -209,8 +201,11 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 recorder.pause()
                 print('taken', frame_num[:])
                 take_pic.value = 2
+                depth_color_frame = rs.colorizer().colorize(depth_frame)
+                depth_image = np.asanyarray(depth_color_frame.get_data())
+                color_image = np.asanyarray(color_frame.get_data())
+                child_conn.send((color_image, depth_image))
 
-        child_conn.close()
         pipeline.stop()
 
     except RuntimeError:
@@ -285,13 +280,17 @@ class RScam:
         gps_process.start()
 
     def main_loop(self):
+        print('main')
+        parent_conn, child_conn = mp.Pipe()
+        self.img_thread_status = True
+        image_thread = threading.Thread(target=self.image_receiver, args=(parent_conn,))
+        image_thread.start()
         while self.restart:
             if self.gps_status.value == 3:
                 break
             elif self.gps_status.value == 2:
                 time.sleep(1)
             elif self.gps_status.value == 1 and self.camera_command.value == 0:
-                parent_conn, child_conn = mp.Pipe()
                 bag = bag_num()
                 bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
                 cam_process = mp.Process(target=Camera, args=(child_conn, self.take_pic,
@@ -301,7 +300,22 @@ class RScam:
                 print('end one round')
         self.camera_command.value = 0
         self.gps_status.value = 99
+        self.img_thread_status = False
         self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
+
+    def image_receiver(self, parent_conn):
+        try:
+            while self.img_thread_status:
+                color_image, depth_image = parent_conn.recv()
+                depth_colormap_resize = cv2.resize(depth_image, (150, 150))
+                color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+                color_cvt_2 = cv2.resize(color_cvt, (150, 150))
+                images = np.hstack((color_cvt_2, depth_colormap_resize))
+                self.img = cv2.imencode('.jpg', images)[1].tobytes()
+        except EOFError:
+            print(EOFError)
+        finally:
+            print("img thread closed")
 
     def command_receiver(self, parent_conn, bag):
         i = 1
@@ -313,13 +327,6 @@ class RScam:
             date = '{},{},{},{}'.format(present.day, present.month, present.year, present.time())
             local_take_pic = False
 
-            color_image, depth_image = parent_conn.recv()
-            depth_colormap_resize = cv2.resize(depth_image, (150, 150))
-            color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-            color_cvt_2 = cv2.resize(color_cvt, (150, 150))
-            images = np.hstack((color_cvt_2, depth_colormap_resize))
-            self.img = cv2.imencode('.jpg', images)[1].tobytes()
-            
             if self.take_pic.value == 2:
                 color_frame_num, depth_frame_num = self.Frame_num[:]
                 print(color_frame_num, depth_frame_num)

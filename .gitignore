@@ -3,3 +3,7 @@ __pycache__
 *.pyc
 2_server.py
 command_for_flask.py
+bag
+foto_log
+location.csv
+foto_location.csv
