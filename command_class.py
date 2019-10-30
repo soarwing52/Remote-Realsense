@@ -210,10 +210,11 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
 
     except RuntimeError:
         print ('run')
+        
 
     finally:
         print('pipeline closed')
-        camera_status.value = 0
+        camera_status.value = 98
 
 
 def bag_num():
@@ -298,7 +299,7 @@ class RScam:
                 cam_process.start()
                 self.command_receiver(parent_conn, bag)
                 print('end one round')
-        self.camera_command.value = 0
+                self.camera_command.value = 0
         self.gps_status.value = 99
         self.img_thread_status = False
         self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
@@ -353,14 +354,9 @@ class RScam:
                 local_take_pic = True
             elif cmd == "restart" or cmd == "quit":
                 self.camera_command.value = 99
-                while self.camera_command.value != 0:
-                    parent_conn.recv()
-                    print('waiting for camera to close')
-                    time.sleep(1)
-                    pass
                 print("close main")
                 self.command = None
-                break
+
             self.command = None
 
             if self.auto and gps_dis(current_location, foto_location) > self.distance:
