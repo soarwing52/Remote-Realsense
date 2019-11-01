@@ -283,6 +283,7 @@ class RScam:
         self.command = None
         self.distance = 15
         self.msg = "initailzing"
+        self.i = 1
 
     def start_gps(self):
         # Start GPS process
@@ -306,7 +307,7 @@ class RScam:
                 cam_process = mp.Process(target=Camera, args=(child_conn, self.take_pic,
                                                               self.Frame_num, self.camera_command, bag_name))
                 cam_process.start()
-                self.command_receiver(parent_conn, bag)
+                self.command_receiver(bag)
                 print('end one round')
                 self.camera_command.value = 0
         self.gps_status.value = 99
@@ -314,6 +315,11 @@ class RScam:
         self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
 
     def image_receiver(self, parent_conn):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        bottomLeftCornerOfText = (20, 20)
+        fontScale = 0.8
+        fontColor = (0, 0, 0)
+        lineType = 4
         try:
             while self.img_thread_status:
                 color_image, depth_image = parent_conn.recv()
@@ -322,7 +328,9 @@ class RScam:
                 color_cvt_2 = cv2.resize(color_cvt, (150, 150))
                 images = np.hstack((color_cvt_2, depth_colormap_resize))
                 (lon, lat) = self.Location[:]
-                text = 'id: {} {:.03},{:.04}'.format(self.i, lon,lat)
+                text = '{},{:.05},{:.05}'.format(self.i, lon,lat)
+                cv2.rectangle(images, (20, 0), (280, 30), (0, 0, 255), -1)
+                cv2.putText(images, text, bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
                 self.img = cv2.imencode('.jpg', images)[1].tobytes()
         except EOFError:
             print(EOFError)
@@ -342,8 +350,8 @@ class RScam:
             if self.take_pic.value == 2:
                 color_frame_num, depth_frame_num = self.Frame_num[:]
                 print(color_frame_num, depth_frame_num)
-                logmsg = '{},{},{},{},{},{}\n'.format(i, color_frame_num, depth_frame_num, lon, lat, date)
-                self.msg = 'Foto {} gemacht um {:.03},{:.04}'.format(i,lon,lat)
+                logmsg = '{},{},{},{},{},{}\n'.format(self.i, color_frame_num, depth_frame_num, lon, lat, date)
+                self.msg = 'Foto {} gemacht um {:.03},{:.04}'.format(self.i,lon,lat)
                 print(self.msg)
                 with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
                     logfile.write(logmsg)
