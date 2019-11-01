@@ -188,6 +188,13 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         color_sensor = profile.get_device().query_sensors()[1]
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
         camera_status.value = 1
+        frames = pipeline.wait_for_frames()
+        depth_frame = frames.get_depth_frame()
+        color_frame = frames.get_color_frame()
+        depth_color_frame = rs.colorizer().colorize(depth_frame)
+        depth_image = np.asanyarray(depth_color_frame.get_data())
+        color_image = np.asanyarray(color_frame.get_data())
+        child_conn.send((color_image, depth_image))
         while camera_status.value != 99:
             """
             frames = pipeline.wait_for_frames()
