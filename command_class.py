@@ -320,14 +320,16 @@ class RScam:
                 color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
                 color_cvt_2 = cv2.resize(color_cvt, (150, 150))
                 images = np.hstack((color_cvt_2, depth_colormap_resize))
+                (lon, lat) = self.Location[:]
+                text = 'id: {} {:.03},{:.04}'.format(self.i, lon,lat)
                 self.img = cv2.imencode('.jpg', images)[1].tobytes()
         except EOFError:
             print(EOFError)
         finally:
             print("img thread closed")
 
-    def command_receiver(self, parent_conn, bag):
-        i = 1
+    def command_receiver(self, bag):
+        self.i = 1
         foto_location = (0, 0)
         while self.camera_command.value != 98:
             (lon, lat) = self.Location[:]
@@ -347,7 +349,7 @@ class RScam:
                 with open('{}foto_location.csv'.format(self.root_dir), 'a') as record:
                     record.write(logmsg)
                 foto_location = (lon, lat)
-                i += 1
+                self.i += 1
                 self.take_pic.value = 0
 
             if self.take_pic.value in (1, 2) or current_location == foto_location:
