@@ -171,8 +171,8 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
     try:
         pipeline = rs.pipeline()
         config = rs.config()
-        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 15)
-        config.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 15)
+        config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 6)
+        config.enable_stream(rs.stream.color, 1920, 1080, rs.format.rgb8, 6)
         config.enable_record_to_file(bag)
         profile = pipeline.start(config)
 
@@ -188,24 +188,17 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
         color_sensor = profile.get_device().query_sensors()[1]
         color_sensor.set_option(rs.option.auto_exposure_priority, True)
         camera_status.value = 1
-        frames = pipeline.wait_for_frames()
-        depth_frame = frames.get_depth_frame()
-        color_frame = frames.get_color_frame()
-        depth_color_frame = rs.colorizer().colorize(depth_frame)
-        depth_image = np.asanyarray(depth_color_frame.get_data())
-        color_image = np.asanyarray(color_frame.get_data())
-        child_conn.send((color_image, depth_image))
         while camera_status.value != 99:
-            """
-            frames = pipeline.wait_for_frames()
-            depth_frame = frames.get_depth_frame()
-            color_frame = frames.get_color_frame()
-            depth_color_frame = rs.colorizer().colorize(depth_frame)
-            depth_image = np.asanyarray(depth_color_frame.get_data())
-            color_image = np.asanyarray(color_frame.get_data())
-            child_conn.send((color_image, depth_image))"""
+            if take_pic.value == 3:
+                frames = pipeline.wait_for_frames()
+                depth_frame = frames.get_depth_frame()
+                color_frame = frames.get_color_frame()
+                depth_color_frame = rs.colorizer().colorize(depth_frame)
+                depth_image = np.asanyarray(depth_color_frame.get_data())
+                color_image = np.asanyarray(color_frame.get_data())
+                child_conn.send((color_image, depth_image))
 
-            if take_pic.value == 1:
+            elif take_pic.value == 1:
                 recorder.resume()
                 frames = pipeline.wait_for_frames()
                 depth_frame = frames.get_depth_frame()
@@ -275,7 +268,7 @@ class RScam:
         self.Location = mp.Array('d',[0,0])
         self.Frame_num = mp.Array('i',[0,0])
 
-        self.take_pic = mp.Value('i',0)
+        self.take_pic = mp.Value('i',3)
         self.camera_command = mp.Value('i',0)
         self.gps_status = mp.Value('i',0)
         jpg_path = "/home/pi/RR/jpg.jpeg"
@@ -309,6 +302,8 @@ class RScam:
             elif self.gps_status.value == 2:
                 time.sleep(1)
             elif self.gps_status.value == 1 and self.camera_command.value == 0:
+                self.take_pic.value = 3
+                self.msg = "initializing"
                 bag = bag_num()
                 bag_name = "{}bag/{}.bag".format(self.root_dir, bag)
                 cam_process = mp.Process(target=Camera, args=(child_conn, self.take_pic,
@@ -334,8 +329,8 @@ class RScam:
                 color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
                 color_cvt_2 = cv2.resize(color_cvt, (150, 150))
                 images = np.hstack((color_cvt_2, depth_colormap_resize))
-                (lon, lat) = self.Location[:]
-                text = '{},{:.05},{:.05}'.format(self.i, lon,lat)
+
+                text = self.msg
                 cv2.rectangle(images, (20, 0), (280, 30), (0, 0, 255), -1)
                 cv2.putText(images, text, bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
                 self.img = cv2.imencode('.jpg', images)[1].tobytes()
@@ -376,6 +371,7 @@ class RScam:
                 self.auto = True
             elif cmd == "false":
                 self.auto = False
+                self.take_pic.value = 3
             elif cmd == "shot":
                 print('take manual')
                 local_take_pic = True
