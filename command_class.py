@@ -193,10 +193,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 frames = pipeline.wait_for_frames()
                 depth_frame = frames.get_depth_frame()
                 color_frame = frames.get_color_frame()
-                depth_color_frame = rs.colorizer().colorize(depth_frame)
-                depth_image = np.asanyarray(depth_color_frame.get_data())
-                color_image = np.asanyarray(color_frame.get_data())
-                child_conn.send((color_image, depth_image))
+
 
             elif take_pic.value == 1:
                 recorder.resume()
@@ -210,10 +207,16 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 recorder.pause()
                 print('taken', frame_num[:])
                 take_pic.value = 2
-                depth_color_frame = rs.colorizer().colorize(depth_frame)
-                depth_image = np.asanyarray(depth_color_frame.get_data())
-                color_image = np.asanyarray(color_frame.get_data())
-                child_conn.send((color_image, depth_image))
+            
+            depth_color_frame = rs.colorizer().colorize(depth_frame)
+            depth_image = np.asanyarray(depth_color_frame.get_data())
+            color_image = np.asanyarray(color_frame.get_data())
+            
+            depth_colormap_resize = cv2.resize(depth_image, (300,200))
+            color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+            color_cvt_2 = cv2.resize(color_cvt, (300,200))
+            images = np.vstack((color_cvt_2, depth_colormap_resize))
+            child_conn.send(images)
 
         pipeline.stop()
 
@@ -283,6 +286,7 @@ class RScam:
         self.command = None
         self.distance = 15
         self.msg = "initailzing"
+        self.gpsmsg = "0,0"
         self.i = 1
 
     def start_gps(self):
@@ -320,23 +324,21 @@ class RScam:
         font = cv2.FONT_HERSHEY_SIMPLEX
         bottomLeftCornerOfText = (20, 20)
         fontScale = 0.8
-        fontColor = (0, 0, 0)
+        fontColor = (255,255,255)
         lineType = 4
         try:
             while self.img_thread_status:
-                color_image, depth_image = parent_conn.recv()
-                depth_colormap_resize = cv2.resize(depth_image, (150, 150))
-                color_cvt = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
-                color_cvt_2 = cv2.resize(color_cvt, (150, 150))
-                images = np.hstack((color_cvt_2, depth_colormap_resize))
-
+                images = parent_conn.recv()
                 text = self.msg
-                cv2.rectangle(images, (20, 0), (280, 30), (0, 0, 255), -1)
+                cv2.rectangle(images, (20, 0), (280, 30), (0,0,0), -1)
                 cv2.putText(images, text, bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
+                cv2.rectangle(images, (20, 200), (280, 230), (0,0,0), -1)
+                cv2.putText(images,self.gpsmsg , (20, 220), font, fontScale, fontColor, lineType)
                 self.img = cv2.imencode('.jpg', images)[1].tobytes()
         except EOFError:
             print(EOFError)
         finally:
+            self.img = cv2.imencode('.jpg', self.jpg)[1].tobytes()
             print("img thread closed")
 
     def command_receiver(self, bag):
@@ -345,6 +347,7 @@ class RScam:
         while self.camera_command.value != 98:
             (lon, lat) = self.Location[:]
             current_location = (lon, lat)
+            self.gpsmsg ="{:.03f},{:.03f}".format(lon,lat)
             present = datetime.datetime.now()
             date = '{},{},{},{}'.format(present.day, present.month, present.year, present.time())
             local_take_pic = False
@@ -353,7 +356,7 @@ class RScam:
                 color_frame_num, depth_frame_num = self.Frame_num[:]
                 print(color_frame_num, depth_frame_num)
                 logmsg = '{},{},{},{},{},{}\n'.format(self.i, color_frame_num, depth_frame_num, lon, lat, date)
-                self.msg = 'Foto {} gemacht um {:.03},{:.04}'.format(self.i,lon,lat)
+                self.msg = '{} - {}'.format(bag, self.i)
                 print(self.msg)
                 with open('{}foto_log/{}.txt'.format(self.root_dir, bag), 'a') as logfile:
                     logfile.write(logmsg)
