@@ -2,8 +2,12 @@ body {
    background: black;
    color: white;
 }
+
+h1 {
+    font-size:50px
+}
 .button {
-  font: bold 25px "Trebuchet MS";
+  font: bold 50px "Trebuchet MS";
   text-decoration: none;
   background-color: #EEEEEE;
   color: #333333;
@@ -12,7 +16,13 @@ body {
   border-right: 1px solid #333333;
   border-bottom: 1px solid #333333;
   border-left: 1px solid #CCCCCC;
+
 }
+
+.big-btn {
+    width: 900px;
+    height: 40px;
+    }
 
 /* The switch - the box around the slider */
 .switch {

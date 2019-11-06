@@ -8,14 +8,14 @@
 
    <center><body>
 
-        <h1>
-                <a href="/cmd/start" class="button">Start</a>
+
+                <a href="/cmd/start" class="button big-btn">Start</a>
                 <a href="/cmd/restart" class="button">Restart</a>
                 <a href="/cmd/shot" class="button">Foto</a>
                 <a href="/cmd/quit" class="button">Quit</a>
-        </h1>
-        <h1> {{ msg }}</h1>
 
+        <h1> {{ msg }}</h1>
+        <h1>
         <form action="/combine" method="get">
             <p>Auto mode
             <label class="switch">
@@ -24,11 +24,11 @@
             </label></p>
             <input type="number" name="spin" placeholder="15">
             <input type="submit">
-            </form>
+            </form></h1>
         <hr>
 
 
-       <img src="{{ url_for('video_feed') }}">
+       <img src="{{ url_for('video_feed') }}" width="100%" height="auto">
    </center>
 
 </body>
