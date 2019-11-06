@@ -15,19 +15,18 @@
                 <a href="/cmd/quit" class="button">Quit</a>
         </h1>
         <h1> {{ msg }}</h1>
-        <h1>
-        <form action="/dis/" method="get">
-            <input type="number" name="spin"  required>
-            <input type="submit" name="distance" value="Switch distance">
 
-        Auto mode
-
+        <form action="/combine" method="get">
+            <p>Auto mode
             <label class="switch">
-            <input type="checkbox" name="auto">
+            <input type="checkbox" name="auto" {{ auto_status }}>
             <span class="slider round"></span>
-            </label>
+            </label></p>
+            <input type="number" name="spin" placeholder="15">
+            <input type="submit">
             </form>
-        </h1>
+        <hr>
+
 
        <img src="{{ url_for('video_feed') }}">
    </center>

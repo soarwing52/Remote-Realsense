@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request
 from command_class import RScam
 import threading
 
@@ -11,7 +11,7 @@ a = RScam()
 @app.route('/')
 def index():
     msg = str(a.Location[:])
-    return render_template('ui.html', msg = 'mmssgg')
+    return render_template('ui.html', msg = 'mmssgg', auto_status=auto_status())
 
 
 def gen():
@@ -55,24 +55,48 @@ def command(cmd):
         finally:
             pass
     print(msg)
-    return render_template('ui.html', msg=msg)
+
+    return render_template('ui.html', msg=msg, auto_status = auto_status())
 
 
 @app.route('/auto/<in_text>')
 def auto(in_text):
     a.command = in_text
-    return in_text
+    return render_template('ui.html', msg='set distance {}'.format(num),auto_status =auto_status())
 
 
-@app.route('/dis/<num>')
-def set_dist(num):
-    print(num, type(num))
+@app.route("/dis/<num>")
+def set_dis(num):
     a.distance = int(num)
-    return num
+    return render_template('ui.html', msg='set distance {}'.format(num),auto_status =auto_status())
+
+
+@app.route('/combine')
+def combine():
+    num = request.args.get("spin")
+    auto = request.args.get('auto')
+
+    print(num, auto)
+    if num != '':
+        a.distance = int(num)
+    if auto is None:
+        a.auto = False
+
+    elif auto == 'on':
+        a.auto = True
+    return render_template('ui.html', msg='set distance {}'.format(num),auto_status =auto_status())
+
+
+def auto_status():
+    if a.auto is True:
+        return "checked"
+    else:
+        return ""
 
 
 if __name__ == '__main__':
     try:
+        app.debug = True
         app.run('0.0.0.0')
     except KeyboardInterrupt:
         pass
