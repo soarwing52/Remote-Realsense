@@ -11,7 +11,7 @@ a = RScam()
 @app.route('/')
 def index():
     msg = str(a.Location[:])
-    return render_template('ui.html', msg = 'mmssgg', auto_status=auto_status())
+    return render_template('ui.html', msg = 'Welcome to RS-APP', auto_status=auto_status())
 
 
 def gen():
