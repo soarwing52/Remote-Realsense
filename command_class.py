@@ -108,9 +108,9 @@ def gps_information(port):
                     lon = min2decimal(data[4])
                     lat = min2decimal(data[2])
             time.sleep(1)
-            import random
-            if lon == 0 or lat == 0:
-                lon, lat = random.random(), random.random()
+            #import random
+            #if lon == 0 or lat == 0:
+            #    lon, lat = random.random(), random.random()
         #print("return", lon, lat)
     except:
         print('some error')
@@ -203,7 +203,7 @@ def Camera(child_conn, take_pic, frame_num, camera_status, bag):
                 var = rs.frame.get_frame_number(color_frame)
                 vard = rs.frame.get_frame_number(depth_frame)
                 frame_num[:] = [var, vard]
-                time.sleep(0.05)
+                time.sleep(0.15)
                 recorder.pause()
                 print('taken', frame_num[:])
                 take_pic.value = 2
