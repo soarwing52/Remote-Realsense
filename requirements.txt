@@ -19,7 +19,7 @@ pygeoif==0.7
 pyparsing==2.1.4
 python-dateutil==2.5.3
 pytz==2016.6.1
-requests==2.11.1
+requests==2.20.0
 scipy==0.17.0
 six==1.10.0
 soupsieve==1.9.2
