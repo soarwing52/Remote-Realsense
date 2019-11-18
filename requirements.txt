@@ -3,7 +3,7 @@ beautifulsoup4==4.7.1
 bs4==0.0.1
 certifi==2019.9.11
 cycler==0.10.0
-Django==1.11.22
+Django==1.11.23
 enum34==1.1.6
 fastkml==0.11
 functools32==3.2.3.post2
