@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "db88941def2041564b72bbb6a6933c49b75cf7ddf914306ea3d272fd1d95b441"
+            "sha256": "bd37ce6ee26eefbae3aff078d7f7bc4c330750aa8cbd1eb3eb60452a23010d09"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -137,6 +137,22 @@
             ],
             "index": "pypi",
             "version": "==3.4.3.18"
+        },
+        "pyrealsense2": {
+            "hashes": [
+                "sha256:0417e2cda00a29cc95e4da0ee2b42cafcc06f61b5ce12563fb0a533e522c1cd9",
+                "sha256:08fd9806ff48bf923c05c4a9014652f27c3db318477334ce115340a511c5d212",
+                "sha256:135e7df4bf22421e90566288fb5bfa52a160a680c24dabdc0f7f51bbbfbd7f42",
+                "sha256:4c8a975c711f423750ab8cf30cecba9df17757616118e2c8b7423426f03f2903",
+                "sha256:5799894abad6210541435d186001c6ca2690cf3fe0e5c1f9803079b81eca3264",
+                "sha256:65fd76d42190c4820e18933503745a7b843852e096d4b1fc3f557e7e01549fa6",
+                "sha256:7109b53c247b392c4870e6545b07fc5a629839883da9536a56fbe401c3563cd6",
+                "sha256:712cdbb951e1b3c45a99502ecd0bbc7f979af55f39c93d0d514deb6f7d06f479",
+                "sha256:7bfa5c212d28607da0a03d3a71ec492795105da942184ee6b4d865c6f09e1de2",
+                "sha256:8323bcb2338f62824f78f710f7a810ec315bc8f4343c39f9a94e46f4d0ef4b07"
+            ],
+            "index": "pypi",
+            "version": "==2.30.0.1184"
         },
         "pyserial": {
             "hashes": [

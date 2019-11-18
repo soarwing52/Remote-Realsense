@@ -10,6 +10,7 @@ numpy = "*"
 opencv-contrib-python = "==3.4.3.18"
 flask = "*"
 pyserial = "*"
+pyrealsense2 = "*"
 
 [requires]
 python_version = "3.7"
