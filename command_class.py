@@ -242,7 +242,7 @@ def bag_num():
             file_name = '{:02d}{:02d}_{:03d}'.format(now.month, now.day, num)
             bag_name = 'bag/{}.bag'.format(file_name)
             if sys.platform == 'linux':
-                bag_name = "/home/pi/RR/" + bag_name
+                bag_name = "/home/pi/Remote-Realsense/" + bag_name
             exist = os.path.isfile(bag_name)
             if exist:
                 num += 1
@@ -259,7 +259,7 @@ class RScam:
         # Create Folders for Data
 
         if sys.platform == "linux":
-            self.root_dir = '/home/pi/RR/'
+            self.root_dir = '/home/pi/Remote-Realsense/'
         else:
             self.root_dir = ''
 
@@ -274,7 +274,7 @@ class RScam:
         self.take_pic = mp.Value('i',3)
         self.camera_command = mp.Value('i',0)
         self.gps_status = mp.Value('i',0)
-        jpg_path = "/home/pi/RR/jpg.jpeg"
+        jpg_path = "/home/pi/Remote-Realsense/jpg.jpeg"
         if os.path.isfile(jpg_path):
             self.jpg = cv2.imread(jpg_path)
         else:

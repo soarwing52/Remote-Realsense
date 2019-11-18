@@ -1,0 +1,15 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+numpy = "*"
+opencv-contrib-python = "==3.4.3.18"
+flask = "*"
+pyserial = "*"
+
+[requires]
+python_version = "3.7"

@@ -1,9 +1,11 @@
 __pycache__
 .idea
 *.pyc
-2_server.py
-command_for_flask.py
 bag
 foto_log
 location.csv
 foto_location.csv
+*.so
+*.2
+*.0
+*.30
