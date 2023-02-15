@@ -7,4 +7,4 @@ numpy==1.17.4
 opencv-contrib-python==3.4.3.18
 pyrealsense2==2.30.0.1184
 pyserial==3.4
-Werkzeug==0.16.0
+Werkzeug==2.2.3
